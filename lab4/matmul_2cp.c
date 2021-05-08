@@ -24,7 +24,7 @@
 #include "util.h"
 
 /* Size of the matrices to multiply */
-#define SIZE 64
+#define SIZE 512
 
 #define SSE_BLOCK_SIZE 4
 
@@ -33,7 +33,7 @@
 #endif
 
 #ifndef L2_BLOCK_SIZE
-#define L2_BLOCK_SIZE 64
+#define L2_BLOCK_SIZE 1024
 #endif
 
 /* A mode that controls how the matrix multiplication is optimized may
@@ -82,46 +82,6 @@ matmul_sse_block(int i, int j, int k)
          * parameter can be used to restrict to which elements the
          * result is stored, all other elements are set to zero.
          */
-
-
-for (int i = 0; i<SIZE; i+=4){
-    for (int a = 0; a<SIZE; a+=4){
-        
-        __m128 rowb0 = _mm_load_ps(&mat_b[i][a]);
-        __m128 rowb1 = _mm_load_ps(&mat_b[i+1][a]);
-        __m128 rowb2 = _mm_load_ps(&mat_b[i+2][a]);
-        __m128 rowb3 = _mm_load_ps(&mat_b[i+3][a]);
-
-        _MM_TRANSPOSE4_PS (rowb0, rowb1, rowb2, rowb3);
-
-        for (int l = 0; l <4; l++){
-            __m128 rowa_int = _mm_load_ps(&mat_a[i][a]);
-
-            __m128 res_0 = rowa_int * rowb0;
-            res_0 = _mm_hadd_ps(res_0, res_0);
-            res_0 = _mm_hadd_ps(res_0, res_0);
-            _mm_store_ss(&mat_c[i+l][a+0], res_0);
-
-            __m128 res_1 = rowa_int * rowb1;
-            res_1 = _mm_hadd_ps(res_1, res_1);
-            res_1 = _mm_hadd_ps(res_1, res_1);
-            _mm_store_ss(&mat_c[i+l][a+1], res_1);
-
-            __m128 res_2 = rowa_int * rowb2;
-            res_2 = _mm_hadd_ps(res_2, res_2);
-            res_2 = _mm_hadd_ps(res_2, res_2);
-            _mm_store_ss(&mat_c[i+l][a+2], res_2);
-
-            __m128 res_3 = rowa_int * rowb3;
-            res_3 = _mm_hadd_ps(res_3, res_3);
-            res_3 = _mm_hadd_ps(res_3, res_3);
-            _mm_store_ss(&mat_c[i+l][a+3], res_3);
-    
-        
-        }
-    }
-}
-
 }
 
 /**
@@ -320,35 +280,35 @@ matmul_sse()
 static void
 matmul_sse()
 {
-            /* Assume that the data size is an even multiple of the 128 bit
+        int i, j, k;
+
+        /* Assume that the data size is an even multiple of the 128 bit
          * SSE vectors (i.e. 4 floats) */
         assert(!(SIZE & 0x3));
 
         /* TASK: Implement your simple matrix multiplication using SSE
          * here. (Multiply mat_a and mat_b into mat_c.)
          */
-    /*
     __m128 vA = _mm_setzero_ps();
     __m128 vB = _mm_setzero_ps();
     __m128 vR = _mm_setzero_ps();
     
     float mul_int;
-    */
 
-    for (int i = 0; i <SIZE; i++){
-        for (int k = 0; k<SIZE; k++){
-            __m128 int_a = _mm_load_ps1(&mat_a[i][k]);
-                for(int j = 0; j<SIZE; j+=4){
-                    __m128 int_b = _mm_load_ps(&mat_b[k][j]);
-                    __m128 int_mul = _mm_mul_ps(int_a,int_b);
-                    __m128 int_c = _mm_load_ps(&mat_c[i][j]);
-                    int_c = _mm_add_ps(int_c,int_mul);
-                    _mm_store_ps(&mat_c[i][j], int_c);
-                }
+    for(i = 0; i < SIZE; ++i) {
+        for(k = 0; k < SIZE; ++k) {
+            vA = _mm_set1_ps(mat_a[i][k]);
+            for(j = 0; j < SIZE; j += 1) {
+                //result[i][j] += mat1[i][k] * mat2[k][j];
+                vB = _mm_load_ps1(&mat_b[k][j]);
+                vR = _mm_load_ps1(&mat_c[i][j]);
+                //_mm_mullo_epi32(vA, vB) 
+                _mm_store_ss(&mul_int , _mm_add_ps(vR, _mm_mul_ps(vA, vB)));
+                vR = _mm_load_ps1(&mul_int);
+                _mm_store_ss(&mat_c[i][j], vR);
+            }
         }
-}
-
-
+    }
 }
 
 #else
