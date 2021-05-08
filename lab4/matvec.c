@@ -25,6 +25,7 @@
 
 /* Size of the matrices to multiply */
 #define SIZE2 14
+//#define SIZE 4
 #define SIZE (1 << SIZE2)
 
 #define MINDEX(n, m) (((n) << SIZE2) | (m))
@@ -36,11 +37,10 @@ static float *vec_b __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
 static float *vec_c __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
 static float *vec_ref __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
 
-static void
-matvec_sse()
+static void matvec_sse()
 {
         /* Assume that the data size is an even multiple of the 128 bit
-         * SSE vectors (i.e. 4 floats) */
+         * SSE vectors (i.e. 4 floats) flaot is 4 bytes (32 bits)*/
         assert(!(SIZE & 0x3));
 
         /* TASK: Implement your SSE version of the matrix-vector
@@ -56,6 +56,18 @@ matvec_sse()
          * HINT: You can create the sum of all elements in a vector
          * using two hadd instructions.
          */
+        for (int row = 0; row < SIZE; row++){
+            __m128 res = _mm_setzero_ps();
+            for (int col = 0; col < SIZE; col+=4){
+                __m128 vec = _mm_load_ps (&vec_b[col]);
+                __m128 mat = _mm_load_ps (&mat_a[col+SIZE*row]);
+                res = _mm_add_ps(res,_mm_mul_ps(mat, vec));
+            }
+            res = _mm_hadd_ps(res,res);
+            res = _mm_hadd_ps(res,res);
+            _mm_store_ss(&vec_c[row], res);
+        }
+        
 }
 
 /**

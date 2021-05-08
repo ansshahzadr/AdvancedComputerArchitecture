@@ -25,6 +25,9 @@
 
 #define CASE_BIT 0x20
 #define XMM_ALIGNMENT_BYTES 16 
+#define AIS 64
+#define ZIS 91
+
 
 /* Use align data if required by the access type */
 #define ALIGN_AS_REQUIRED 1
@@ -149,6 +152,7 @@ lcase_sse_simple(char *restrict dst, const char *restrict src, size_t len)
          * bytes (one 128 bit vector register). */
         assert(!(len & 0xF));
 
+
         /* TASK: Implement the simple algorithm for converting text to
          * lower case without checking that the characters are within
          * the allowed range. Use SSE instructions and the
@@ -156,9 +160,21 @@ lcase_sse_simple(char *restrict dst, const char *restrict src, size_t len)
          * reference implementation.
          */
         /* HINT: Check out the documentation for the following:
-         *  - _mm_set1_epi8
-         *  - _mm_or_si128 (the por instruction)
+         *  - _mm_set1_epi8 : loads zeros into 16 8-bit positions in the vector
+         *  - _mm_or_si128 (the por instruction) : c = a | b
          */
+
+    
+        __m128i shift = _mm_set1_epi8(CASE_BIT);
+        __m128i v;
+       for (int i = 0; i < len; i += 8) {
+          v = LOAD_SI128((__m128i *)(src + i));
+            STORE_SI128((__m128i *)(dst + i), _mm_or_si128(v,shift));
+        }
+
+            /* Assume that length is an even multiple of the
+     * vector size */
+
 }
 
 static void
@@ -176,6 +192,25 @@ lcase_sse_cond(char *restrict dst, const char *restrict src, size_t len)
          *  - _mm_cmpgt_epi8 (the pcmpgtb instruction)
          *  - _mm_and_si128 (the pand instruction)
          */
+        __m128i shift = _mm_set1_epi8(CASE_BIT);
+        __m128i lower = _mm_set1_epi8(AIS);
+        __m128i upper = _mm_set1_epi8(ZIS);
+        __m128i comp_lower;
+        __m128i comp_higher;
+        __m128i and_shift;
+        __m128i last_and;
+        __m128i temp;
+        __m128i v;
+       
+        for (int i = 0; i < len; i+=8) {
+          v = _mm_loadu_si128((__m128i *)(src + i));
+          comp_lower = _mm_cmpgt_epi8(v, lower);
+          comp_higher = _mm_cmpgt_epi8(upper,v);
+          and_shift = _mm_and_si128(comp_higher,shift);
+          last_and = _mm_and_si128(comp_lower,and_shift);
+          temp = _mm_or_si128(v ,last_and);
+          STORE_SI128((__m128i *)(dst + i), temp);
+      }
 }
 
 static char *

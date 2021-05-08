@@ -24,7 +24,7 @@
 #include "util.h"
 
 /* Size of the matrices to multiply */
-#define SIZE 2048
+#define SIZE 1024
 
 #define SSE_BLOCK_SIZE 4
 
@@ -280,15 +280,35 @@ matmul_sse()
 static void
 matmul_sse()
 {
-        int i, j, k;
-
-        /* Assume that the data size is an even multiple of the 128 bit
+            /* Assume that the data size is an even multiple of the 128 bit
          * SSE vectors (i.e. 4 floats) */
         assert(!(SIZE & 0x3));
 
         /* TASK: Implement your simple matrix multiplication using SSE
          * here. (Multiply mat_a and mat_b into mat_c.)
          */
+    /*
+    __m128 vA = _mm_setzero_ps();
+    __m128 vB = _mm_setzero_ps();
+    __m128 vR = _mm_setzero_ps();
+    
+    float mul_int;
+    */
+
+    for (int i = 0; i <SIZE; i++){
+        for (int k = 0; k<SIZE; k++){
+            __m128 int_a = _mm_load_ps1(&mat_a[i][k]);
+                for(int j = 0; j<SIZE; j+=4){
+                    __m128 int_b = _mm_load_ps(&mat_b[k][j]);
+                    __m128 int_mul = _mm_mul_ps(int_a,int_b);
+                    __m128 int_c = _mm_load_ps(&mat_c[i][j]);
+                    int_c = _mm_add_ps(int_c,int_mul);
+                    _mm_store_ps(&mat_c[i][j], int_c);
+                }
+        }
+}
+
+
 }
 
 #else
@@ -301,8 +321,7 @@ matmul_sse()
  * Reference implementation of the matrix multiply algorithm. Used to
  * verify the answer from matmul_opt. Do NOT change this function.
  */
-static void
-matmul_ref()
+static void matmul_ref()
 {
         int i, j, k;
 
@@ -318,8 +337,7 @@ matmul_ref()
 /**
  * Function used to verify the result. No need to change this one.
  */
-static int
-verify_result()
+static int verify_result()
 {
         float e_sum;
         int i, j;
